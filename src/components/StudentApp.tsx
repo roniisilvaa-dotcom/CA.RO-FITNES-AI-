@@ -387,16 +387,16 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
   const nextClass = classes.find(c => c.agendada);
 
   return (
-    <div className="relative w-full max-w-[360px] h-[720px] bg-dark-pitch rounded-[40px] border-[10px] border-white/10 shadow-2xl overflow-hidden flex flex-col font-sans select-none text-white">
-      {/* Phone Notch & Header bar */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/15 rounded-b-xl z-50 flex items-center justify-around px-2 text-[10px] text-white/40 font-mono">
+    <div className="relative w-full md:max-w-[1200px] h-screen md:h-[85vh] bg-dark-pitch md:rounded-[24px] md:border md:border-white/10 shadow-2xl overflow-hidden flex flex-col font-sans select-none text-white mx-auto">
+      {/* Phone Notch & Header bar - hidden to maximize screen space */}
+      <div className="hidden absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/15 rounded-b-xl z-50 items-center justify-around px-2 text-[10px] text-white/40 font-mono">
         <div className="w-2.5 h-2.5 bg-black rounded-full"></div>
         <span className="font-bold tracking-widest text-[9px]">CA.RO AI</span>
         <div className="w-1.5 h-1.5 bg-brand rounded-full animate-ping"></div>
       </div>
 
-      {/* Top Status Indicators (Fake iOS/Android bar) */}
-      <div className="bg-black/90 pt-6 pb-2 px-6 flex justify-between items-center text-[10px] text-white/40 font-mono z-40 border-b border-white/5">
+      {/* Top Status Indicators (Fake iOS/Android bar) - hidden to maximize screen space */}
+      <div className="hidden bg-black/90 pt-6 pb-2 px-6 justify-between items-center text-[10px] text-white/40 font-mono z-40 border-b border-white/5">
         <span>07:30 UTC</span>
         <div className="flex items-center gap-1.5">
           <span className="text-brand font-bold">5G</span>
@@ -411,7 +411,7 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
         
         {/* SCREEN: HOME */}
         {screen === "home" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto w-full">
             
             {/* Greeting & Quick Notification Indicator */}
             <div className="flex justify-between items-center">
@@ -447,172 +447,175 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
               </button>
             </div>
 
-            {/* Water Tracker Widget */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 relative overflow-hidden">
-              <div 
-                className="absolute bottom-0 left-0 bg-brand/5 w-full transition-all duration-500 ease-out pointer-events-none"
-                style={{ height: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
-              ></div>
-
-              <div className="flex justify-between items-center relative z-10">
-                <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                  💧 Hidratação Diária
-                </h4>
-                <button 
-                  onClick={() => {
-                    const newWater = 0;
-                    setWaterConsumed(newWater);
-                    localStorage.setItem(`water_${studentId}`, newWater.toString());
-                  }}
-                  className="text-[9px] text-rose-400 font-mono font-bold hover:underline uppercase"
-                >
-                  Reiniciar
-                </button>
-              </div>
-
-              <div className="flex justify-between items-end relative z-10 pt-1">
-                <div>
-                  <span className="text-2xl font-display font-black text-white">{waterConsumed}</span>
-                  <span className="text-xs text-white/40 font-mono"> / 3000 ml</span>
-                </div>
-                <span className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded-full font-mono font-black">
-                  {Math.round((waterConsumed / 3000) * 100)}%
-                </span>
-              </div>
-
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative z-10 border border-white/5">
+            {/* Responsive Grid Container for Widgets */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Water Tracker Widget */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 relative overflow-hidden">
                 <div 
-                  className="h-full bg-brand rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
+                  className="absolute bottom-0 left-0 bg-brand/5 w-full transition-all duration-500 ease-out pointer-events-none"
+                  style={{ height: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
                 ></div>
-              </div>
 
-              <div className="flex gap-2 relative z-10">
-                <button 
-                  onClick={() => {
-                    const newWater = waterConsumed + 250;
-                    setWaterConsumed(newWater);
-                    localStorage.setItem(`water_${studentId}`, newWater.toString());
-                  }}
-                  className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
-                >
-                  +250ml
-                </button>
-                <button 
-                  onClick={() => {
-                    const newWater = waterConsumed + 500;
-                    setWaterConsumed(newWater);
-                    localStorage.setItem(`water_${studentId}`, newWater.toString());
-                  }}
-                  className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
-                >
-                  +500ml
-                </button>
-              </div>
-            </div>
-
-            {/* AI Advisor Assistant Widget */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-brand/10 border border-brand/20 rounded-lg text-brand">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="text-xs font-display font-bold text-white uppercase tracking-tight">CA.RO Fitness AI</h4>
-                    <p className="text-[9px] text-white/40">Seu assistente virtual de treino</p>
-                  </div>
-                </div>
-                <span className="text-[8px] bg-brand/10 text-brand px-1.5 py-0.5 rounded border border-brand/20 font-mono font-bold">ONLINE</span>
-              </div>
-              <p className="text-[11px] text-white/80 leading-relaxed italic text-left">
-                &ldquo;Olá, Rony! Como está o seu joelho hoje? Posso sugerir um aquecimento articular antes de treinar.&rdquo;
-              </p>
-              <div className="flex gap-2 pt-1">
-                <button 
-                  onClick={() => { setScreen("chat-ia"); }}
-                  className="flex-1 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] rounded-lg font-bold flex items-center justify-center gap-1.5 transition text-white uppercase tracking-wider text-[9px]"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-brand" /> Chat
-                </button>
-                <button 
-                  onClick={() => { setScreen("sugestao-ia"); }}
-                  className="flex-1 py-1.5 bg-brand text-black hover:bg-brand-hover text-[10px] rounded-lg font-black flex items-center justify-center gap-1 transition uppercase tracking-wider text-[9px]"
-                >
-                  <Dumbbell className="w-3.5 h-3.5" /> IA Treino
-                </button>
-              </div>
-            </div>
-
-            {/* Todays Training Widget */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                  <Dumbbell className="w-4 h-4 text-brand" /> Treino Recomendado
-                </h4>
-                <button onClick={() => setScreen("treino")} className="text-[10px] text-brand hover:underline flex items-center font-bold">
-                  Ver todos <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-              {workouts.length > 0 ? (
-                <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-2 text-left">
-                  <p className="text-xs font-bold text-white uppercase tracking-tight truncate">{workouts[0].nome}</p>
-                  <div className="flex justify-between text-[10px] text-white/40 font-mono">
-                    <span>Foco: {workouts[0].objetivo}</span>
-                    <span>Divisão: {workouts[0].frequencia}</span>
-                  </div>
+                <div className="flex justify-between items-center relative z-10">
+                  <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                    💧 Hidratação Diária
+                  </h4>
                   <button 
-                    onClick={() => { setActiveWorkout(workouts[0]); setScreen("treino"); }}
-                    className="w-full py-1.5 bg-brand/10 border border-brand/20 text-brand rounded-lg text-[10px] font-black hover:bg-brand/20 transition flex items-center justify-center gap-1 uppercase tracking-wider text-[9px]"
+                    onClick={() => {
+                      const newWater = 0;
+                      setWaterConsumed(newWater);
+                      localStorage.setItem(`water_${studentId}`, newWater.toString());
+                    }}
+                    className="text-[9px] text-rose-400 font-mono font-bold hover:underline uppercase"
                   >
-                    <Play className="w-3 h-3 fill-current" /> Iniciar Sessão de Treino
+                    Reiniciar
                   </button>
                 </div>
-              ) : (
-                <p className="text-[11px] text-white/40 text-center py-2">Nenhum treino vinculado ainda.</p>
-              )}
-            </div>
 
-            {/* Next Scheduled Class Widget */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                  <Calendar className="w-4 h-4 text-brand" /> Próxima Aula
-                </h4>
-                <button onClick={() => setScreen("agenda")} className="text-[10px] text-brand hover:underline flex items-center font-bold">
-                  Reservar <ChevronRight className="w-3 h-3" />
+                <div className="flex justify-between items-end relative z-10 pt-1">
+                  <div>
+                    <span className="text-2xl font-display font-black text-white">{waterConsumed}</span>
+                    <span className="text-xs text-white/40 font-mono"> / 3000 ml</span>
+                  </div>
+                  <span className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded-full font-mono font-black">
+                    {Math.round((waterConsumed / 3000) * 100)}%
+                  </span>
+                </div>
+
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative z-10 border border-white/5">
+                  <div 
+                    className="h-full bg-brand rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
+                  ></div>
+                </div>
+
+                <div className="flex gap-2 relative z-10">
+                  <button 
+                    onClick={() => {
+                      const newWater = waterConsumed + 250;
+                      setWaterConsumed(newWater);
+                      localStorage.setItem(`water_${studentId}`, newWater.toString());
+                    }}
+                    className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
+                  >
+                    +250ml
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const newWater = waterConsumed + 500;
+                      setWaterConsumed(newWater);
+                      localStorage.setItem(`water_${studentId}`, newWater.toString());
+                    }}
+                    className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
+                  >
+                    +500ml
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Advisor Assistant Widget */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-brand/10 border border-brand/20 rounded-lg text-brand">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-xs font-display font-bold text-white uppercase tracking-tight">CA.RO Fitness AI</h4>
+                      <p className="text-[9px] text-white/40">Seu assistente virtual de treino</p>
+                    </div>
+                  </div>
+                  <span className="text-[8px] bg-brand/10 text-brand px-1.5 py-0.5 rounded border border-brand/20 font-mono font-bold">ONLINE</span>
+                </div>
+                <p className="text-[11px] text-white/80 leading-relaxed italic text-left">
+                  &ldquo;Olá, Rony! Como está o seu joelho hoje? Posso sugerir um aquecimento articular antes de treinar.&rdquo;
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button 
+                    onClick={() => { setScreen("chat-ia"); }}
+                    className="flex-1 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] rounded-lg font-bold flex items-center justify-center gap-1.5 transition text-white uppercase tracking-wider text-[9px]"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-brand" /> Chat
+                  </button>
+                  <button 
+                    onClick={() => { setScreen("sugestao-ia"); }}
+                    className="flex-1 py-1.5 bg-brand text-black hover:bg-brand-hover text-[10px] rounded-lg font-black flex items-center justify-center gap-1 transition uppercase tracking-wider text-[9px]"
+                  >
+                    <Dumbbell className="w-3.5 h-3.5" /> IA Treino
+                  </button>
+                </div>
+              </div>
+
+              {/* Todays Training Widget */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                    <Dumbbell className="w-4 h-4 text-brand" /> Treino Recomendado
+                  </h4>
+                  <button onClick={() => setScreen("treino")} className="text-[10px] text-brand hover:underline flex items-center font-bold">
+                    Ver todos <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                {workouts.length > 0 ? (
+                  <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-2 text-left">
+                    <p className="text-xs font-bold text-white uppercase tracking-tight truncate">{workouts[0].nome}</p>
+                    <div className="flex justify-between text-[10px] text-white/40 font-mono">
+                      <span>Foco: {workouts[0].objetivo}</span>
+                      <span>Divisão: {workouts[0].frequencia}</span>
+                    </div>
+                    <button 
+                      onClick={() => { setActiveWorkout(workouts[0]); setScreen("treino"); }}
+                      className="w-full py-1.5 bg-brand/10 border border-brand/20 text-brand rounded-lg text-[10px] font-black hover:bg-brand/20 transition flex items-center justify-center gap-1 uppercase tracking-wider text-[9px]"
+                    >
+                      <Play className="w-3 h-3 fill-current" /> Iniciar Sessão de Treino
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-white/40 text-center py-2">Nenhum treino vinculado ainda.</p>
+                )}
+              </div>
+
+              {/* Next Scheduled Class Widget */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                    <Calendar className="w-4 h-4 text-brand" /> Próxima Aula
+                  </h4>
+                  <button onClick={() => setScreen("agenda")} className="text-[10px] text-brand hover:underline flex items-center font-bold">
+                    Reservar <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                {nextClass ? (
+                  <div className="p-3 bg-black/40 border border-brand/10 rounded-xl flex justify-between items-center text-left">
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-tight">{nextClass.nome}</p>
+                      <p className="text-[10px] text-white/40">{nextClass.professor} • {new Date(nextClass.data_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <span className="text-[8px] bg-brand/15 text-brand border border-brand/20 px-2 py-0.5 rounded-full font-mono font-bold tracking-wider">RESERVADO</span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-black/40 border border-white/5 rounded-xl text-center">
+                    <p className="text-[10px] text-white/40 mb-1">Nenhuma aula agendada hoje.</p>
+                    <button onClick={() => setScreen("agenda")} className="text-[10px] text-brand font-bold hover:underline uppercase tracking-wide text-[9px]">
+                      Ver agenda completa
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Subscription Status */}
+              <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between col-span-1 md:col-span-2 lg:col-span-2">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-brand" />
+                  <div className="text-left">
+                    <p className="text-[10px] font-mono font-bold text-brand tracking-wider">PLANO VIP BLACK</p>
+                    <p className="text-[9px] text-white/40">Ativo • Renovação Automática</p>
+                  </div>
+                </div>
+                <button onClick={() => setScreen("plano")} className="text-[9px] text-white/40 hover:text-white underline font-mono">
+                  BENEFÍCIOS
                 </button>
               </div>
-              {nextClass ? (
-                <div className="p-3 bg-black/40 border border-brand/10 rounded-xl flex justify-between items-center text-left">
-                  <div>
-                    <p className="text-xs font-bold text-white uppercase tracking-tight">{nextClass.nome}</p>
-                    <p className="text-[10px] text-white/40">{nextClass.professor} • {new Date(nextClass.data_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                  </div>
-                  <span className="text-[8px] bg-brand/15 text-brand border border-brand/20 px-2 py-0.5 rounded-full font-mono font-bold tracking-wider">RESERVADO</span>
-                </div>
-              ) : (
-                <div className="p-3 bg-black/40 border border-white/5 rounded-xl text-center">
-                  <p className="text-[10px] text-white/40 mb-1">Nenhuma aula agendada hoje.</p>
-                  <button onClick={() => setScreen("agenda")} className="text-[10px] text-brand font-bold hover:underline uppercase tracking-wide text-[9px]">
-                    Ver agenda completa
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Active Subscription Status */}
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-brand" />
-                <div className="text-left">
-                  <p className="text-[10px] font-mono font-bold text-brand tracking-wider">PLANO VIP BLACK</p>
-                  <p className="text-[9px] text-white/40">Ativo • Renovação Automática</p>
-                </div>
-              </div>
-              <button onClick={() => setScreen("plano")} className="text-[9px] text-white/40 hover:text-white underline font-mono">
-                BENEFÍCIOS
-              </button>
             </div>
 
           </motion.div>
