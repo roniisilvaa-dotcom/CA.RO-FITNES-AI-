@@ -17,7 +17,32 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
   const [screen, setScreen] = useState<string>("home");
   
   // Data State
-  const [student, setStudent] = useState<Aluno | null>(null);
+  const [student, setStudent] = useState<Aluno>(() => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        return {
+          id: u.id || studentId,
+          nome: u.nome || "Aluno",
+          email: u.email || "",
+          foto_url: u.foto_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop",
+          plano: "VIP Black",
+          status: "ativo",
+          created_at: new Date().toISOString()
+        };
+      }
+    } catch (e) {}
+    return {
+      id: studentId,
+      nome: "Aluno",
+      email: "",
+      foto_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop",
+      plano: "VIP Black",
+      status: "ativo",
+      created_at: new Date().toISOString()
+    };
+  });
   const [workouts, setWorkouts] = useState<Treino[]>([]);
   const [activeWorkout, setActiveWorkout] = useState<Treino | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<any>(null);
@@ -68,54 +93,49 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
   const [workoutSummary, setWorkoutSummary] = useState({ setsCompleted: 0, exercisesCompleted: 0, totalWeightLifted: 0 });
 
   // Loading
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch Student Data
   const fetchStudentData = async () => {
     try {
+      // First fetch the student profile
       const sRes = await fetch("/api/students");
       const sData: Aluno[] = await sRes.json();
       const current = sData.find(s => s.id === studentId) || sData[0];
       setStudent(current);
 
       if (current) {
-        // Workouts
-        const wRes = await fetch(`/api/workouts?studentId=${current.id}`);
-        const wData = await wRes.json();
+        // Fetch all student-related resources in parallel using Promise.all to maximize performance
+        const [wRes, cRes, nRes, aRes, pRes, iaRes] = await Promise.all([
+          fetch(`/api/workouts?studentId=${current.id}`),
+          fetch(`/api/classes?studentId=${current.id}`),
+          fetch(`/api/notifications?studentId=${current.id}`),
+          fetch(`/api/attendance?studentId=${current.id}`),
+          fetch(`/api/progress?studentId=${current.id}`),
+          fetch(`/api/ai/conversations?studentId=${current.id}`)
+        ]);
+
+        const [wData, cData, nData, aData, pData, iaData] = await Promise.all([
+          wRes.json(),
+          cRes.json(),
+          nRes.json(),
+          aRes.json(),
+          pRes.json(),
+          iaRes.json()
+        ]);
+
         setWorkouts(wData);
         if (wData.length > 0 && !activeWorkout) {
           setActiveWorkout(wData[0]);
         }
-
-        // Classes
-        const cRes = await fetch(`/api/classes?studentId=${current.id}`);
-        const cData = await cRes.json();
         setClasses(cData);
-
-        // Notifications
-        const nRes = await fetch(`/api/notifications?studentId=${current.id}`);
-        const nData = await nRes.json();
         setNotifications(nData);
-
-        // Attendance
-        const aRes = await fetch(`/api/attendance?studentId=${current.id}`);
-        const aData = await aRes.json();
         setAttendance(aData);
-
-        // Progress
-        const pRes = await fetch(`/api/progress?studentId=${current.id}`);
-        const pData = await pRes.json();
         setProgress(pData);
-
-        // IA Conversations
-        const iaRes = await fetch(`/api/ai/conversations?studentId=${current.id}`);
-        const iaData = await iaRes.json();
         setConversations(iaData);
       }
-      setIsLoading(false);
     } catch (err) {
-      console.error("Error loading student app data", err);
-      setIsLoading(false);
+      console.error("Error loading student app data in parallel", err);
     }
   };
 
@@ -374,13 +394,8 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
     }
   };
 
-  if (isLoading || !student) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full bg-dark-pitch text-white p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-brand border-r-2 border-transparent"></div>
-        <p className="mt-4 text-white/40 font-mono text-sm uppercase tracking-wider">Carregando App...</p>
-      </div>
-    );
+  if (!student) {
+    return null;
   }
 
   const unreadCount = notifications.filter(n => n.status === "nao_lida").length;
