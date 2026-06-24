@@ -1,0 +1,6 @@
+{
+  "name": "CA.RO Fitness AI",
+  "description": "Plataforma SaaS para academias com aplicativo do aluno, carteirinha digital, agenda de aulas, controle de evolução e assistente de IA para treinos e bem-estar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
