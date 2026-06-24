@@ -53,6 +53,20 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
   // Audio Playback or completed checklist
   const [completedExercises, setCompletedExercises] = useState<Record<string, boolean>>({});
 
+  // Water Tracker State
+  const [waterConsumed, setWaterConsumed] = useState<number>(() => {
+    const saved = localStorage.getItem(`water_${studentId}`);
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // Active Visual Workout Session State
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [activeSetStatus, setActiveSetStatus] = useState<Record<string, boolean[]>>({});
+  const [restTimeLeft, setRestTimeLeft] = useState(0);
+  const [workoutTimeElapsed, setWorkoutTimeElapsed] = useState(0);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [workoutSummary, setWorkoutSummary] = useState({ setsCompleted: 0, exercisesCompleted: 0, totalWeightLifted: 0 });
+
   // Loading
   const [isLoading, setIsLoading] = useState(true);
 
@@ -122,6 +136,27 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Rest Timer & Workout duration useEffect
+  useEffect(() => {
+    let interval: any = null;
+    if (restTimeLeft > 0) {
+      interval = setInterval(() => {
+        setRestTimeLeft(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [restTimeLeft]);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (screen === "executando-treino") {
+      interval = setInterval(() => {
+        setWorkoutTimeElapsed(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [screen]);
 
   // Fetch Chat Messages when Conversation Active
   useEffect(() => {
@@ -412,6 +447,70 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
               </button>
             </div>
 
+            {/* Water Tracker Widget */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 relative overflow-hidden">
+              <div 
+                className="absolute bottom-0 left-0 bg-brand/5 w-full transition-all duration-500 ease-out pointer-events-none"
+                style={{ height: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
+              ></div>
+
+              <div className="flex justify-between items-center relative z-10">
+                <h4 className="text-xs font-display font-black text-white/60 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                  💧 Hidratação Diária
+                </h4>
+                <button 
+                  onClick={() => {
+                    const newWater = 0;
+                    setWaterConsumed(newWater);
+                    localStorage.setItem(`water_${studentId}`, newWater.toString());
+                  }}
+                  className="text-[9px] text-rose-400 font-mono font-bold hover:underline uppercase"
+                >
+                  Reiniciar
+                </button>
+              </div>
+
+              <div className="flex justify-between items-end relative z-10 pt-1">
+                <div>
+                  <span className="text-2xl font-display font-black text-white">{waterConsumed}</span>
+                  <span className="text-xs text-white/40 font-mono"> / 3000 ml</span>
+                </div>
+                <span className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded-full font-mono font-black">
+                  {Math.round((waterConsumed / 3000) * 100)}%
+                </span>
+              </div>
+
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative z-10 border border-white/5">
+                <div 
+                  className="h-full bg-brand rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (waterConsumed / 3000) * 100)}%` }}
+                ></div>
+              </div>
+
+              <div className="flex gap-2 relative z-10">
+                <button 
+                  onClick={() => {
+                    const newWater = waterConsumed + 250;
+                    setWaterConsumed(newWater);
+                    localStorage.setItem(`water_${studentId}`, newWater.toString());
+                  }}
+                  className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
+                >
+                  +250ml
+                </button>
+                <button 
+                  onClick={() => {
+                    const newWater = waterConsumed + 500;
+                    setWaterConsumed(newWater);
+                    localStorage.setItem(`water_${studentId}`, newWater.toString());
+                  }}
+                  className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
+                >
+                  +500ml
+                </button>
+              </div>
+            </div>
+
             {/* AI Advisor Assistant Widget */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
               <div className="flex items-start justify-between">
@@ -665,13 +764,32 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
             {/* Active Ficha Header */}
             {activeWorkout && (
               <div className="space-y-3">
-                <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl text-left">
-                  <h4 className="text-xs font-display font-black text-brand uppercase tracking-wider">{activeWorkout.nome}</h4>
-                  <div className="flex gap-3 text-[10px] text-white/40 mt-1.5 font-mono">
-                    <span>Foco: {activeWorkout.objetivo}</span>
-                    <span>Nível: {activeWorkout.nivel}</span>
-                    <span>Divisão: {activeWorkout.frequencia}</span>
+                <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl text-left space-y-3">
+                  <div>
+                    <h4 className="text-xs font-display font-black text-brand uppercase tracking-wider">{activeWorkout.nome}</h4>
+                    <div className="flex gap-3 text-[10px] text-white/40 mt-1.5 font-mono">
+                      <span>Foco: {activeWorkout.objetivo}</span>
+                      <span>Nível: {activeWorkout.nivel}</span>
+                      <span>Divisão: {activeWorkout.frequencia}</span>
+                    </div>
                   </div>
+                  
+                  <button 
+                    onClick={() => {
+                      setCurrentExerciseIndex(0);
+                      setWorkoutTimeElapsed(0);
+                      setScreen("executando-treino");
+                      // Pre-fill active sets status
+                      const initialStatus: Record<string, boolean[]> = {};
+                      activeWorkout.exercicios?.forEach(te => {
+                        initialStatus[te.id] = Array(te.series || 3).fill(false);
+                      });
+                      setActiveSetStatus(initialStatus);
+                    }}
+                    className="w-full py-2.5 bg-brand hover:bg-brand-hover text-black rounded-xl text-[10px] font-black uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand/10"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" /> Iniciar Treino (Modo Visual)
+                  </button>
                 </div>
 
                 <div className="text-[11px] font-display font-black text-white/40 px-1 uppercase tracking-widest text-left">Exercícios ({activeWorkout.exercicios?.length || 0})</div>
@@ -1046,6 +1164,53 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
               </div>
             </div>
 
+            {/* SVG Weight Chart */}
+            {progress.length >= 2 ? (() => {
+              const sorted = [...progress].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+              const weights = sorted.map(p => Number(p.peso));
+              const minWeight = Math.min(...weights) - 2;
+              const maxWeight = Math.max(...weights) + 2;
+              const range = maxWeight - minWeight || 1;
+
+              const width = 340;
+              const height = 110;
+              const padding = 20;
+
+              const points = sorted.map((p, idx) => {
+                const x = padding + (idx * (width - 2 * padding)) / (sorted.length - 1);
+                const y = height - padding - ((Number(p.peso) - minWeight) * (height - 2 * padding)) / range;
+                return { x, y, label: `${p.peso}kg`, date: new Date(p.created_at).toLocaleDateString() };
+              });
+
+              const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+              return (
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2.5">
+                  <span className="text-[9px] font-mono font-bold text-brand uppercase tracking-wider block text-left">Gráfico de Peso</span>
+                  <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+                    <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+                    <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                    <path d={pathData} fill="none" stroke="#A3E635" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {points.map((p, idx) => (
+                      <g key={idx}>
+                        <circle cx={p.x} cy={p.y} r="4" fill="#A3E635" />
+                        <text x={p.x} y={p.y - 8} fill="#ffffff" fontSize="8" textAnchor="middle" fontWeight="bold" fontFamily="sans-serif">
+                          {p.label}
+                        </text>
+                        <text x={p.x} y={height - 4} fill="rgba(255,255,255,0.4)" fontSize="6" textAnchor="middle" fontFamily="monospace">
+                          {p.date.split('/')[0]}/{p.date.split('/')[1]}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+              );
+            })() : (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center text-xs text-white/40">
+                Adicione pelo menos 2 registros de evolução para ver o gráfico de peso.
+              </div>
+            )}
+
             {/* Record physical measures toggler */}
             <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
               <h4 className="text-xs font-display font-black text-white flex items-center gap-1.5 uppercase tracking-wider">
@@ -1126,6 +1291,224 @@ export default function StudentApp({ studentId, onPresenceTriggered }: StudentAp
               ))}
             </div>
           </motion.div>
+        )}
+
+        {/* SCREEN: VISUAL WORKOUT EXECUTION MODE */}
+        {screen === "executando-treino" && activeWorkout && activeWorkout.exercicios && (
+          (() => {
+            const te = activeWorkout.exercicios[currentExerciseIndex];
+            const isLast = currentExerciseIndex === activeWorkout.exercicios.length - 1;
+            
+            return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4 text-left">
+                {/* Header with progress */}
+                <div className="flex justify-between items-center bg-white/5 border border-white/10 p-3 rounded-xl">
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] font-mono text-brand uppercase tracking-wider font-bold">Modo Execução</span>
+                    <h4 className="text-xs font-display font-black text-white uppercase">{activeWorkout.nome.split(" - ")[0]}</h4>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono text-white/50 block">Duração</span>
+                    <span className="text-xs font-bold text-white font-mono">
+                      {Math.floor(workoutTimeElapsed / 60)}m {workoutTimeElapsed % 60}s
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress indicator bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[9px] font-mono text-white/40 uppercase font-bold px-0.5">
+                    <span>Progresso dos Exercícios</span>
+                    <span>{currentExerciseIndex + 1} de {activeWorkout.exercicios.length}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div 
+                      className="h-full bg-brand rounded-full transition-all duration-300"
+                      style={{ width: `${((currentExerciseIndex + 1) / activeWorkout.exercicios.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Active Exercise Card */}
+                {te && (
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-4">
+                    {/* Visual Media */}
+                    <div className="relative h-44 rounded-xl overflow-hidden border border-white/5 bg-black">
+                      <img 
+                        src={te.exercicio?.midia_url} 
+                        alt={te.exercicio?.nome} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="absolute top-3 left-3 bg-brand/95 text-black px-2 py-0.5 rounded-full font-mono text-[8px] font-black uppercase">
+                        {te.exercicio?.grupo_muscular}
+                      </span>
+                    </div>
+
+                    {/* Info */}
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-display font-black text-white uppercase tracking-tight">{te.exercicio?.nome}</h3>
+                      <p className="text-[10px] text-white/40 font-mono">Meta: {te.series} séries x {te.repeticoes} reps ({te.carga})</p>
+                    </div>
+
+                    {/* Set checklist tracker */}
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold block">Checklist de Séries</span>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {Array.from({ length: te.series || 3 }).map((_, sIdx) => {
+                          const isDone = activeSetStatus[te.id]?.[sIdx] || false;
+                          return (
+                            <button
+                              key={sIdx}
+                              onClick={() => {
+                                const status = activeSetStatus[te.id] ? [...activeSetStatus[te.id]] : Array(te.series).fill(false);
+                                status[sIdx] = !status[sIdx];
+                                setActiveSetStatus(prev => ({ ...prev, [te.id]: status }));
+                                if (status[sIdx]) {
+                                  // Trigger Rest Timer
+                                  setRestTimeLeft(60);
+                                }
+                              }}
+                              className={`w-full p-2.5 rounded-xl border flex justify-between items-center transition cursor-pointer text-left ${
+                                isDone 
+                                  ? 'bg-brand/10 border-brand/30 text-brand' 
+                                  : 'bg-black/25 border-white/5 text-white/60 hover:border-white/10'
+                              }`}
+                            >
+                              <span className="text-xs font-bold font-mono">SÉRIE {sIdx + 1}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-mono text-white/40 font-bold">{te.repeticoes} Reps • {te.carga}</span>
+                                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center ${
+                                  isDone ? 'bg-brand border-brand text-black' : 'border-white/20'
+                                }`}>
+                                  {isDone && <Check className="w-3.5 h-3.5 stroke-[3px]" />}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Rest Timer display overlay if active */}
+                    {restTimeLeft > 0 && (
+                      <div className="bg-brand/10 border border-brand/20 p-3 rounded-2xl flex items-center justify-between animate-pulse">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-brand" />
+                          <div>
+                            <p className="text-[9px] font-mono text-brand uppercase font-bold">Tempo de Recuperação</p>
+                            <p className="text-xs text-white">Descanse os músculos e se prepare</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl font-display font-black text-white font-mono">{restTimeLeft}s</span>
+                          <button 
+                            onClick={() => setRestTimeLeft(0)} 
+                            className="text-[9px] font-mono bg-white/5 border border-white/10 hover:bg-white/10 px-2 py-1 rounded-lg uppercase"
+                          >
+                            Pular
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Details / Instructions accordion */}
+                    <div className="bg-black/20 border border-white/5 rounded-xl p-3 space-y-1">
+                      <span className="text-[8px] font-mono text-white/40 uppercase tracking-wider block">Dica de Execução</span>
+                      <p className="text-[10px] text-white/60 leading-relaxed italic">“{te.observacoes || te.exercicio?.instrucoes?.slice(0, 100) + '...'}”</p>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Actions bottom bar */}
+                <div className="flex justify-between gap-3 pt-2">
+                  <button
+                    disabled={currentExerciseIndex === 0}
+                    onClick={() => setCurrentExerciseIndex(prev => Math.max(0, prev - 1))}
+                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] rounded-xl font-bold uppercase tracking-wider text-center text-white disabled:opacity-30 cursor-pointer"
+                  >
+                    Anterior
+                  </button>
+                  
+                  {isLast ? (
+                    <button
+                      onClick={() => {
+                        let totalSets = 0;
+                        Object.keys(activeSetStatus).forEach(key => {
+                          totalSets += activeSetStatus[key].filter(v => v).length;
+                        });
+                        setWorkoutSummary({
+                          setsCompleted: totalSets,
+                          exercisesCompleted: activeWorkout.exercicios.length,
+                          totalWeightLifted: totalSets * 12
+                        });
+                        setShowSummaryModal(true);
+                      }}
+                      className="flex-1 py-3 bg-brand hover:bg-brand-hover text-black text-[10px] rounded-xl font-black uppercase tracking-wider text-center cursor-pointer shadow-lg shadow-brand/20"
+                    >
+                      Finalizar Treino
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setCurrentExerciseIndex(prev => Math.min(activeWorkout.exercicios.length - 1, prev + 1))}
+                      className="flex-1 py-3 bg-white/10 hover:bg-white/15 border border-brand/20 text-[10px] rounded-xl font-black uppercase tracking-wider text-center text-brand cursor-pointer"
+                    >
+                      Próximo
+                    </button>
+                  )}
+                </div>
+
+                {/* Summary Modal overlay */}
+                {showSummaryModal && (
+                  <div className="fixed inset-0 bg-black/95 flex items-center justify-center p-6 z-50">
+                    <div className="w-full max-w-[360px] bg-white/[0.02] border border-white/10 p-8 rounded-3xl text-center space-y-6">
+                      <div className="flex justify-center">
+                        <div className="p-4 bg-brand text-black rounded-full shadow-lg neon-glow animate-bounce">
+                          <Award className="w-10 h-10 stroke-[2.5]" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight">Treino Concluído!</h3>
+                        <p className="text-xs text-white/40 font-mono">CA.RO FITNESS SAAS ECOSYSTEM</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 border-t border-b border-white/10 py-5 font-mono">
+                        <div className="text-center">
+                          <span className="text-[8px] text-white/40 block">DURAÇÃO TOTAL</span>
+                          <span className="text-lg font-bold text-white">
+                            {Math.floor(workoutTimeElapsed / 60)}m {workoutTimeElapsed % 60}s
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[8px] text-white/40 block">SÉRIES FEITAS</span>
+                          <span className="text-lg font-bold text-brand">{workoutSummary.setsCompleted}</span>
+                        </div>
+                        <div className="text-center col-span-2 border-t border-white/5 pt-3">
+                          <span className="text-[8px] text-white/40 block">CARGA TOTAL ESTIMADA</span>
+                          <span className="text-sm font-bold text-white">{workoutSummary.setsCompleted * 20} kg levantados</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setShowSummaryModal(false);
+                          setScreen("home");
+                          setWorkoutTimeElapsed(0);
+                          setActiveSetStatus({});
+                        }}
+                        className="w-full py-4 bg-brand hover:bg-brand-hover text-black rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer"
+                      >
+                        Voltar para a Home
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </motion.div>
+            );
+          })()
         )}
 
         {/* SCREEN: PROFILE */}
