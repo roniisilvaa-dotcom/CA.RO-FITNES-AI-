@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Shield, Dumbbell, Sparkles, Cpu, Users, Eye, Info, 
-  HelpCircle, HardDrive, CheckCircle2, ChevronRight, User, Settings, Award
+  Shield, Dumbbell, Sparkles, Cpu, Users, Eye, Info, LogOut,
+  HelpCircle, HardDrive, CheckCircle2, ChevronRight, User, Settings, Award, Lock, Mail
 } from "lucide-react";
 import StudentApp from "./components/StudentApp";
 import GymAdmin from "./components/GymAdmin";
@@ -9,18 +9,26 @@ import MasterAdmin from "./components/MasterAdmin";
 import SecurityAI from "./components/SecurityAI";
 
 export default function App() {
-  // Simple path-based routing state
+  // Session User State
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Routing and inputs
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginRole, setLoginRole] = useState<'aluno' | 'academia' | 'master'>('aluno');
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const [currentRoute, setCurrentRoute] = useState<'student' | 'admin'>(() => {
     return window.location.pathname.startsWith('/admin') ? 'admin' : 'student';
   });
 
-  // Current active portal on the admin side: 'academia' | 'master' | 'security'
+  // Portal tab selection
   const [activePortal, setActivePortal] = useState<'academia' | 'master' | 'security'>('academia');
-  
-  // Real-time synchronization event triggered by QR scanner clicks in StudentApp
   const [presenceEventCount, setPresenceEventCount] = useState<number>(0);
-  
-  // Helper state to force child components to refresh when updates are made
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
   useEffect(() => {
@@ -45,21 +53,176 @@ export default function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role: loginRole })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        const loggedUser = { ...data.user, role: loginRole };
+        localStorage.setItem("user", JSON.stringify(loggedUser));
+        setUser(loggedUser);
+        if (loginRole === 'aluno') {
+          navigateTo('student');
+        } else {
+          navigateTo('admin');
+          setActivePortal(loginRole === 'master' ? 'master' : 'academia');
+        }
+      } else {
+        setErrorMsg(data.message || "Credenciais inválidas");
+      }
+    } catch (err) {
+      setErrorMsg("Erro ao conectar ao servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    navigateTo('student');
+  };
+
+  // IF NOT LOGGED IN - RENDER PREMIUM LOGIN SCREEN
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-dark-pitch text-white flex flex-col items-center justify-center p-4 select-none font-sans relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute w-[500px] h-[500px] bg-brand/10 rounded-full blur-[120px] -top-40 -left-40 pointer-events-none"></div>
+        <div className="absolute w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[150px] -bottom-40 -right-40 pointer-events-none"></div>
+
+        <div className="w-full max-w-[450px] bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10 space-y-8">
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="p-4 bg-brand text-black rounded-2xl shadow-lg neon-glow animate-pulse">
+              <Dumbbell className="w-7 h-7 stroke-[2.5]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-display font-black uppercase tracking-tighter text-white">
+                <span className="text-brand">CA.RO</span> FITNESS AI
+              </h1>
+              <p className="text-xs text-white/40 uppercase tracking-widest font-mono mt-1">SaaS Ecosystem Authenticator</p>
+            </div>
+          </div>
+
+          {/* Role selector tabs */}
+          <div className="grid grid-cols-3 gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+            {(['aluno', 'academia', 'master'] as const).map((role) => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => {
+                  setLoginRole(role);
+                  setErrorMsg("");
+                }}
+                className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  loginRole === role 
+                    ? 'bg-brand text-black font-bold shadow-md' 
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {role === 'aluno' ? 'Aluno' : role === 'academia' ? 'Academia' : 'Developer'}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">E-mail de Acesso</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="exemplo@carogym.com.br"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:outline-none focus:border-brand/50 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">Senha de Acesso</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:outline-none focus:border-brand/50 transition-all"
+                />
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 text-xs rounded-xl p-3 text-center font-bold">
+                ⚠️ {errorMsg}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand hover:bg-brand/90 text-black py-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-brand/20 disabled:opacity-50"
+            >
+              {loading ? "Autenticando..." : "Entrar no Sistema"}
+            </button>
+          </form>
+
+          {/* Quick instructions for testing */}
+          <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl text-[11px] text-white/50 space-y-2">
+            <span className="text-[9px] font-display font-black text-brand uppercase tracking-wider block">📌 Contas de Teste (MVP):</span>
+            <div className="space-y-1 font-mono text-[10px]">
+              <div>• Aluno: <span className="text-white">ronysiilvaa1@gmail.com</span> (senha: 123456)</div>
+              <div>• Academia: <span className="text-white">carlos@carogym.com.br</span> (senha: 123456)</div>
+              <div>• Developer: <span className="text-white">master@carofitness.ai</span> (senha: 123456)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 1. STUDENT/MOBILE FOCUS ROUTE
-  if (currentRoute === 'student') {
+  if (currentRoute === 'student' || user.role === 'aluno') {
     return (
       <div className="min-h-screen bg-dark-pitch text-white flex flex-col items-center justify-center p-0 sm:p-4">
-        {/* Floating Developer Switch to go to Admin Panel */}
-        <button 
-          onClick={() => navigateTo('admin')}
-          className="fixed top-4 right-4 bg-white/5 hover:bg-brand hover:text-black border border-white/10 text-white/60 hover:text-white text-[10px] px-3 py-1.5 rounded-lg uppercase tracking-wider font-bold transition z-50 cursor-pointer"
-        >
-          Painel Web Admin →
-        </button>
+        {/* Top bar control for student session */}
+        <div className="fixed top-4 left-4 right-4 flex justify-between items-center z-50">
+          <div className="flex items-center gap-2 bg-dark-card/85 backdrop-blur border border-white/10 px-4 py-2 rounded-2xl text-xs">
+            <User className="w-3.5 h-3.5 text-brand" />
+            <span className="font-mono text-white/80">{user.nome}</span>
+          </div>
+          <div className="flex gap-2">
+            {(user.role === 'academia' || user.role === 'master') && (
+              <button 
+                onClick={() => navigateTo('admin')}
+                className="bg-dark-card/85 hover:bg-brand hover:text-black border border-white/10 text-white/60 hover:text-white text-[10px] px-3.5 py-2.5 rounded-xl uppercase tracking-wider font-bold transition cursor-pointer"
+              >
+                Painel Admin →
+              </button>
+            )}
+            <button 
+              onClick={handleLogout}
+              className="bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/20 text-rose-400 text-[10px] px-3.5 py-2.5 rounded-xl uppercase tracking-wider font-bold transition cursor-pointer flex items-center gap-1.5"
+            >
+              <LogOut className="w-3 h-3" /> Sair
+            </button>
+          </div>
+        </div>
         
         <div className="w-full max-w-[420px]">
           <StudentApp 
-            studentId="alu_rony" 
+            studentId={user.id} 
             onPresenceTriggered={handlePresenceScanned} 
           />
         </div>
@@ -103,16 +266,19 @@ export default function App() {
               <Users className="w-3.5 h-3.5" /> Academia
             </button>
 
-            <button
-              onClick={() => setActivePortal('master')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 ${
-                activePortal === 'master' 
-                  ? 'bg-brand text-black neon-glow' 
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Cpu className="w-3.5 h-3.5" /> Master
-            </button>
+            {/* Developer controls only shown to master admin role */}
+            {user.role === 'master' && (
+              <button
+                onClick={() => setActivePortal('master')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 ${
+                  activePortal === 'master' 
+                    ? 'bg-brand text-black neon-glow' 
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Cpu className="w-3.5 h-3.5" /> Master (Developer)
+              </button>
+            )}
 
             <button
               onClick={() => setActivePortal('security')}
@@ -131,14 +297,23 @@ export default function App() {
               onClick={() => navigateTo('student')}
               className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 text-brand hover:bg-white/5"
             >
-              Visualizar App Aluno
+              Simular App Aluno
             </button>
           </div>
 
-          {/* Quick platform links or stats */}
-          <div className="hidden lg:flex items-center gap-2 text-xs font-mono">
-            <span className="w-2 h-2 bg-brand rounded-full animate-pulse neon-glow"></span>
-            <span className="text-white/40">PORT 3000</span>
+          {/* User profile & Logout */}
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col text-right">
+              <span className="text-xs font-bold text-white">{user.nome}</span>
+              <span className="text-[9px] font-mono text-brand uppercase tracking-wider">{user.role === 'master' ? 'Desenvolvedor' : 'Gestor Academia'}</span>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="p-2.5 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 rounded-xl transition cursor-pointer border border-rose-500/20"
+              title="Sair da Conta"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -159,7 +334,7 @@ export default function App() {
                 onRefreshStudent={handleRefreshData} 
               />
             )}
-            {activePortal === 'master' && (
+            {activePortal === 'master' && user.role === 'master' && (
               <MasterAdmin />
             )}
             {activePortal === 'security' && (
