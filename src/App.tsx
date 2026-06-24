@@ -9,7 +9,12 @@ import MasterAdmin from "./components/MasterAdmin";
 import SecurityAI from "./components/SecurityAI";
 
 export default function App() {
-  // Current active portal on the right side: 'academia' | 'master' | 'security'
+  // Simple path-based routing state
+  const [currentRoute, setCurrentRoute] = useState<'student' | 'admin'>(() => {
+    return window.location.pathname.startsWith('/admin') ? 'admin' : 'student';
+  });
+
+  // Current active portal on the admin side: 'academia' | 'master' | 'security'
   const [activePortal, setActivePortal] = useState<'academia' | 'master' | 'security'>('academia');
   
   // Real-time synchronization event triggered by QR scanner clicks in StudentApp
@@ -17,6 +22,20 @@ export default function App() {
   
   // Helper state to force child components to refresh when updates are made
   const [refreshKey, setRefreshKey] = useState<number>(0);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentRoute(window.location.pathname.startsWith('/admin') ? 'admin' : 'student');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (route: 'student' | 'admin') => {
+    const path = route === 'admin' ? '/admin' : '/';
+    window.history.pushState({}, '', path);
+    setCurrentRoute(route);
+  };
 
   const handlePresenceScanned = () => {
     setPresenceEventCount(prev => prev + 1);
@@ -26,6 +45,29 @@ export default function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // 1. STUDENT/MOBILE FOCUS ROUTE
+  if (currentRoute === 'student') {
+    return (
+      <div className="min-h-screen bg-dark-pitch text-white flex flex-col items-center justify-center p-0 sm:p-4">
+        {/* Floating Developer Switch to go to Admin Panel */}
+        <button 
+          onClick={() => navigateTo('admin')}
+          className="fixed top-4 right-4 bg-white/5 hover:bg-brand hover:text-black border border-white/10 text-white/60 hover:text-white text-[10px] px-3 py-1.5 rounded-lg uppercase tracking-wider font-bold transition z-50 cursor-pointer"
+        >
+          Painel Web Admin →
+        </button>
+        
+        <div className="w-full max-w-[420px]">
+          <StudentApp 
+            studentId="alu_rony" 
+            onPresenceTriggered={handlePresenceScanned} 
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. ADMIN/WEB FOCUS ROUTE
   return (
     <div className="min-h-screen bg-dark-pitch text-white flex flex-col font-sans selection:bg-brand selection:text-black">
       
@@ -82,6 +124,15 @@ export default function App() {
             >
               <Eye className="w-3.5 h-3.5" /> Security
             </button>
+
+            <div className="h-4 w-px bg-white/10 mx-1"></div>
+
+            <button
+              onClick={() => navigateTo('student')}
+              className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 text-brand hover:bg-white/5"
+            >
+              Visualizar App Aluno
+            </button>
           </div>
 
           {/* Quick platform links or stats */}
@@ -93,31 +144,10 @@ export default function App() {
       </header>
 
       {/* Main Workspace Layout */}
-      <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 lg:p-8">
         
-        {/* LEFT COLUMN: Student Smartphone Simulator View (Always Visible) */}
-        <section className="lg:col-span-4 flex flex-col items-center space-y-4">
-          <div className="text-center space-y-1">
-            <h2 className="text-[11px] font-display font-black uppercase tracking-widest text-brand">Visualização do Aluno</h2>
-            <p className="text-[11px] text-white/40 uppercase tracking-wider font-mono">Simulador Mobile Interativo</p>
-          </div>
-
-          {/* Render the full high-fidelity mobile app */}
-          <StudentApp 
-            studentId="alu_rony" 
-            onPresenceTriggered={handlePresenceScanned} 
-          />
-          
-          <div className="bg-white/5 border border-white/10 p-5 rounded-2xl w-full max-w-[360px] text-left space-y-2">
-            <span className="text-[10px] font-display font-black text-brand uppercase tracking-wider block">💡 Dica de Demonstração</span>
-            <p className="text-[11px] text-white/60 leading-relaxed">
-              No aplicativo móvel acima, toque na aba **&ldquo;Acesso&rdquo;** e clique em **&ldquo;Registrar Entrada&rdquo;**. Isso simulará o scanner óptico enviando o sinal para o portal complementar **CA.RO Security AI** do lado direito!
-            </p>
-          </div>
-        </section>
-
-        {/* RIGHT COLUMN: Interactive Corporate SaaS Portals based on switch */}
-        <section className="lg:col-span-8 space-y-6">
+        {/* Interactive Corporate SaaS Portals based on switch */}
+        <section className="space-y-6">
           <div className="text-left space-y-1">
             <h2 className="text-[11px] font-display font-black uppercase tracking-widest text-white/40">Painéis Administrativos Web</h2>
             <p className="text-[11px] text-white/40 uppercase tracking-wider font-mono">Explore as ferramentas de gestão corporativa e SaaS</p>
