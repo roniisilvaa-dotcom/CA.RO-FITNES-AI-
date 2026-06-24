@@ -195,38 +195,13 @@ export default function App() {
   // 1. STUDENT/MOBILE FOCUS ROUTE
   if (currentRoute === 'student' || user.role === 'aluno') {
     return (
-      <div className="min-h-screen bg-dark-pitch text-white flex flex-col items-center justify-center p-0 sm:p-4">
-        {/* Top bar control for student session */}
-        <div className="fixed top-4 left-4 right-4 flex justify-between items-center z-50">
-          <div className="flex items-center gap-2 bg-dark-card/85 backdrop-blur border border-white/10 px-4 py-2 rounded-2xl text-xs">
-            <User className="w-3.5 h-3.5 text-brand" />
-            <span className="font-mono text-white/80">{user.nome}</span>
-          </div>
-          <div className="flex gap-2">
-            {(user.role === 'academia' || user.role === 'master') && (
-              <button 
-                onClick={() => navigateTo('admin')}
-                className="bg-dark-card/85 hover:bg-brand hover:text-black border border-white/10 text-white/60 hover:text-white text-[10px] px-3.5 py-2.5 rounded-xl uppercase tracking-wider font-bold transition cursor-pointer"
-              >
-                Painel Admin →
-              </button>
-            )}
-            <button 
-              onClick={handleLogout}
-              className="bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/20 text-rose-400 text-[10px] px-3.5 py-2.5 rounded-xl uppercase tracking-wider font-bold transition cursor-pointer flex items-center gap-1.5"
-            >
-              <LogOut className="w-3 h-3" /> Sair
-            </button>
-          </div>
-        </div>
-        
-        <div className="w-full max-w-[420px]">
-          <StudentApp 
-            studentId={user.id} 
-            onPresenceTriggered={handlePresenceScanned} 
-          />
-        </div>
-      </div>
+      <StudentApp 
+        studentId={user.id} 
+        onPresenceTriggered={handlePresenceScanned} 
+        userRole={user.role}
+        onLogout={handleLogout}
+        onNavigateToAdmin={() => navigateTo('admin')}
+      />
     );
   }
 
