@@ -93,6 +93,58 @@ export default function StudentApp({
     return saved ? parseInt(saved, 10) : 0;
   });
 
+  // MOVE energy metric & Coach AI adjustment state
+  const [movesToday, setMovesToday] = useState<number>(() => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const saved = localStorage.getItem(`moves_${studentId}_${dateStr}`);
+    return saved ? parseInt(saved, 10) : 150; // Base baseline moves points
+  });
+  const getExerciseVideoUrl = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("agachamento") || n.includes("squat") || n.includes("leg")) {
+      return "https://assets.mixkit.co/videos/preview/mixkit-man-performing-squats-with-a-barbell-in-gym-40292-large.mp4";
+    }
+    if (n.includes("supino") || n.includes("press") || n.includes("peito")) {
+      return "https://assets.mixkit.co/videos/preview/mixkit-young-man-performing-bench-press-exercise-at-gym-40286-large.mp4";
+    }
+    if (n.includes("rosca") || n.includes("biceps") || n.includes("bíceps") || n.includes("halter")) {
+      return "https://assets.mixkit.co/videos/preview/mixkit-athletic-man-lifting-dumbbells-in-the-gym-40281-large.mp4";
+    }
+    if (n.includes("corrida") || n.includes("esteira") || n.includes("aerobico") || n.includes("aquec")) {
+      return "https://assets.mixkit.co/videos/preview/mixkit-man-running-on-treadmill-at-the-gym-40297-large.mp4";
+    }
+    return "https://assets.mixkit.co/videos/preview/mixkit-athlete-man-exercising-in-the-gym-40277-large.mp4";
+  };
+
+  const [isCoachAdjusted, setIsCoachAdjusted] = useState(false);
+  const [coachAIPipAlert, setCoachAIPipAlert] = useState<string | null>(null);
+
+  const addMoves = (amount: number) => {
+    setMovesToday(prev => {
+      const newVal = prev + amount;
+      const dateStr = new Date().toISOString().split('T')[0];
+      localStorage.setItem(`moves_${studentId}_${dateStr}`, newVal.toString());
+      return newVal;
+    });
+  };
+
+  const getLast7Days = () => {
+    const list = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const savedMoves = localStorage.getItem(`moves_${studentId}_${dateStr}`);
+      list.push({
+        name: d.toLocaleDateString('pt-BR', { weekday: 'short' }).substring(0, 3).toUpperCase(),
+        dayNum: d.getDate(),
+        moves: savedMoves ? parseInt(savedMoves, 10) : (i === 0 ? movesToday : Math.floor(180 + (i * 25) + Math.random() * 80)),
+        dateStr
+      });
+    }
+    return list;
+  };
+
   // Active Visual Workout Session State
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [activeSetStatus, setActiveSetStatus] = useState<Record<string, boolean[]>>({});
@@ -552,30 +604,76 @@ export default function StudentApp({
         
         {/* SCREEN: HOME */}
         {screen === "home" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto w-full">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 md:p-6 space-y-4 max-w-5xl mx-auto w-full">
             
-            {/* Greeting & Quick Notification Indicator */}
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-white/40 font-mono uppercase tracking-wider font-bold">Olá, bem-vindo!</p>
-                <h2 className="text-lg font-display font-black text-white tracking-tight flex items-center gap-1 uppercase">
-                  {student.nome} <Sparkles className="w-4.5 h-4.5 text-brand animate-pulse" />
-                </h2>
+            {/* Greeting & Movergy Status Header */}
+            <div className="flex justify-between items-center bg-white/[0.02] border border-white/10 rounded-3xl p-5 relative overflow-hidden shadow-lg">
+              {/* Blurred sphere backglow */}
+              <div className="absolute w-32 h-32 bg-brand/10 rounded-full blur-2xl -top-10 -right-10 animate-pulse pointer-events-none"></div>
+
+              <div className="flex items-center gap-4 relative z-10">
+                {/* 3D-like rotating Movergy Sphere Frame */}
+                <div className="relative w-16 h-16 flex items-center justify-center rounded-full border-2 border-brand/20 p-1 bg-black/40">
+                  <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-brand animate-spin" style={{ animationDuration: '4s' }}></div>
+                  <img src={student.foto_url} alt={student.nome} className="w-12 h-12 rounded-full border border-brand object-cover relative z-10" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold">Membro Premium</p>
+                  <h2 className="text-md font-display font-black text-white uppercase tracking-tight flex items-center gap-1">
+                    {student.nome} <Sparkles className="w-4.5 h-4.5 text-brand animate-pulse" />
+                  </h2>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="w-2 h-2 rounded-full bg-brand animate-ping"></span>
+                    <span className="text-[10px] font-mono text-brand font-black uppercase tracking-wider">{movesToday} MOVEs Hoje</span>
+                  </div>
+                </div>
               </div>
-              <button 
-                onClick={() => { setScreen("notificacoes"); handleMarkAllNotificationsRead(); }}
-                className="relative p-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition"
-              >
-                <Bell className="w-4 h-4 text-white/80" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-brand rounded-full animate-bounce"></span>
-                )}
-              </button>
+
+              <div className="flex items-center gap-2 relative z-10">
+                <button 
+                  onClick={() => { setScreen("notificacoes"); handleMarkAllNotificationsRead(); }}
+                  className="relative p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition cursor-pointer"
+                >
+                  <Bell className="w-4.5 h-4.5 text-white/80" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full animate-bounce"></span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Calendário Semanal Interativo (Frequência e MOVEs) */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-mono text-brand uppercase tracking-widest font-bold">Frequência & Energia Semanal</span>
+                <span className="text-[9px] text-white/50 font-mono">Meta Diária: <strong className="text-brand">300 M</strong></span>
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {getLast7Days().map((day, idx) => {
+                  const percent = Math.min(100, (day.moves / 300) * 100);
+                  const isToday = idx === 6;
+                  return (
+                    <div key={idx} className="flex flex-col items-center space-y-1.5 p-1">
+                      <span className="text-[9px] font-mono text-white/40">{day.name}</span>
+                      <div className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white/5 border border-white/10 overflow-hidden">
+                        <div 
+                          className="absolute bottom-0 w-full bg-brand/20 transition-all duration-500" 
+                          style={{ height: `${percent}%` }}
+                        ></div>
+                        <span className={`text-xs font-mono font-bold relative z-10 ${isToday ? "text-brand" : "text-white"}`}>
+                          {day.dayNum}
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-mono text-white/50 font-bold">{day.moves} M</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Quick QR Code Launcher Widget */}
             <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 rounded-2xl p-4 flex justify-between items-center shadow-lg">
-              <div className="space-y-1">
+              <div className="space-y-1 text-left">
                 <span className="text-[9px] font-mono text-brand uppercase tracking-widest font-bold">Portão de Acesso</span>
                 <h3 className="text-sm font-display font-bold text-white uppercase">Carteirinha Digital</h3>
                 <p className="text-[10px] text-white/40">Acesso via QR Code Security AI</p>
@@ -636,6 +734,7 @@ export default function StudentApp({
                       const newWater = waterConsumed + 250;
                       setWaterConsumed(newWater);
                       localStorage.setItem(`water_${studentId}`, newWater.toString());
+                      addMoves(5);
                     }}
                     className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
                   >
@@ -646,6 +745,7 @@ export default function StudentApp({
                       const newWater = waterConsumed + 500;
                       setWaterConsumed(newWater);
                       localStorage.setItem(`water_${studentId}`, newWater.toString());
+                      addMoves(10);
                     }}
                     className="flex-1 py-2 bg-white/5 border border-white/10 hover:border-brand/40 text-[10px] rounded-xl font-bold transition text-white uppercase tracking-wider cursor-pointer"
                   >
@@ -705,10 +805,21 @@ export default function StudentApp({
                       <span>Divisão: {workouts[0].frequencia}</span>
                     </div>
                     <button 
-                      onClick={() => { setActiveWorkout(workouts[0]); setScreen("treino"); }}
-                      className="w-full py-1.5 bg-brand/10 border border-brand/20 text-brand rounded-lg text-[10px] font-black hover:bg-brand/20 transition flex items-center justify-center gap-1 uppercase tracking-wider text-[9px]"
+                      onClick={() => {
+                        const targetW = workouts[0];
+                        setActiveWorkout(targetW);
+                        setCurrentExerciseIndex(0);
+                        setWorkoutTimeElapsed(0);
+                        setScreen("executando-treino");
+                        const initialStatus: Record<string, boolean[]> = {};
+                        targetW.exercicios?.forEach(te => {
+                          initialStatus[te.id] = Array(te.series || 3).fill(false);
+                        });
+                        setActiveSetStatus(initialStatus);
+                      }}
+                      className="w-full py-2 bg-brand text-black hover:bg-brand-hover rounded-lg text-[10px] font-black transition flex items-center justify-center gap-1 uppercase tracking-wider shadow-md shadow-brand/10"
                     >
-                      <Play className="w-3 h-3 fill-current" /> Iniciar Sessão de Treino
+                      <Play className="w-3.5 h-3.5 fill-current" /> Iniciar Treino de Hoje (Rápido)
                     </button>
                   </div>
                 ) : (
@@ -764,7 +875,7 @@ export default function StudentApp({
 
         {/* SCREEN: CARTEIRINHA DIGITAL */}
         {screen === "carteirinha" && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-6 space-y-6 flex flex-col items-center text-center">
+          <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-6 space-y-6 flex flex-col items-center text-center">
             <div className="w-full flex items-center gap-2">
               <button onClick={() => setScreen("home")} className="p-1 bg-white/5 border border-white/10 rounded-full">
                 <ArrowLeft className="w-4 h-4" />
@@ -823,7 +934,7 @@ export default function StudentApp({
 
         {/* SCREEN: MEU PLANO */}
         {screen === "plano" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 space-y-4">
             <div className="flex items-center gap-2">
               <button onClick={() => setScreen("home")} className="p-1 bg-white/5 border border-white/10 rounded-full">
                 <ArrowLeft className="w-4 h-4" />
@@ -877,7 +988,7 @@ export default function StudentApp({
 
         {/* SCREEN: WORKOUTS */}
         {screen === "treino" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button onClick={() => setScreen("home")} className="p-1 bg-white/5 border border-white/10 rounded-full">
@@ -991,7 +1102,7 @@ export default function StudentApp({
 
         {/* SCREEN: DETALHE DO EXERCICIO */}
         {screen === "exercicio-detalhe" && selectedExercise && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4 text-left">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 space-y-4 text-left">
             <div className="flex items-center gap-2">
               <button onClick={() => setScreen("treino")} className="p-1 bg-white/5 border border-white/10 rounded-full">
                 <ArrowLeft className="w-4 h-4" />
@@ -999,12 +1110,19 @@ export default function StudentApp({
               <h3 className="text-xs font-display font-black uppercase tracking-wider text-brand truncate">Como Executar</h3>
             </div>
 
-            <img 
-              src={selectedExercise.exercicio?.midia_url} 
-              alt={selectedExercise.exercicio?.nome} 
-              className="w-full h-40 object-cover rounded-2xl border border-white/10 shadow-inner" 
-              referrerPolicy="no-referrer"
-            />
+            <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+              <video 
+                src={getExerciseVideoUrl(selectedExercise.exercicio?.nome || "")}
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-3 right-3 bg-brand/95 text-black text-[8px] font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Loop Execução
+              </div>
+            </div>
 
             <div className="space-y-1">
               <span className="text-[9px] bg-brand/10 border border-brand/20 text-brand px-2 py-0.5 rounded-full font-mono font-bold uppercase">
@@ -1042,7 +1160,7 @@ export default function StudentApp({
 
         {/* SCREEN: CHAT IA ASSISTANT */}
         {screen === "chat-ia" && (
-          <div className="h-full flex flex-col">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="h-full flex flex-col">
             {/* Chat conversations loader header */}
             <div className="bg-black/90 border-b border-white/5 p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1150,12 +1268,12 @@ export default function StudentApp({
                 <Send className="w-4 h-4 stroke-[2.5]" />
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* SCREEN: SUGGEST TRAINING BY IA */}
         {screen === "sugestao-ia" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4 text-left">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 space-y-4 text-left">
             <div className="flex items-center gap-2">
               <button onClick={() => setScreen("home")} className="p-1 bg-white/5 border border-white/10 rounded-full">
                 <ArrowLeft className="w-4 h-4" />
@@ -1201,7 +1319,7 @@ export default function StudentApp({
 
         {/* SCREEN: AGENDA DE AULAS */}
         {screen === "agenda" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 space-y-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1, ease: "easeOut" }} className="p-4 space-y-4">
             <div className="flex items-center gap-2">
               <button onClick={() => setScreen("home")} className="p-1 bg-white/5 border border-white/10 rounded-full">
                 <ArrowLeft className="w-4 h-4" />
@@ -1293,18 +1411,22 @@ export default function StudentApp({
             </div>
 
             {/* Quick Stats overview */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div className="bg-white/5 border border-white/10 p-2.5 rounded-xl text-center">
-                <span className="text-[8px] text-white/40 font-mono font-bold uppercase tracking-wider">PESO ATUAL</span>
-                <p className="text-sm font-display font-black text-brand">{student.peso} kg</p>
+                <span className="text-[8px] text-white/40 font-mono font-bold uppercase tracking-wider">PESO</span>
+                <p className="text-xs font-display font-black text-brand">{student.peso} kg</p>
               </div>
               <div className="bg-white/5 border border-white/10 p-2.5 rounded-xl text-center">
                 <span className="text-[8px] text-white/40 font-mono font-bold uppercase tracking-wider">ALTURA</span>
-                <p className="text-sm font-display font-black text-white">{student.altura} m</p>
+                <p className="text-xs font-display font-black text-white">{student.altura} m</p>
               </div>
               <div className="bg-white/5 border border-white/10 p-2.5 rounded-xl text-center">
                 <span className="text-[8px] text-white/40 font-mono font-bold uppercase tracking-wider">IMC</span>
-                <p className="text-sm font-display font-black text-white">{(student.peso / (student.altura * student.altura)).toFixed(1)}</p>
+                <p className="text-xs font-display font-black text-white">{(student.peso / (student.altura * student.altura)).toFixed(1)}</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 p-2.5 rounded-xl text-center">
+                <span className="text-[8px] text-brand font-mono font-bold uppercase tracking-wider">MOVERGY</span>
+                <p className="text-xs font-display font-black text-brand">{movesToday} M</p>
               </div>
             </div>
 
@@ -1473,16 +1595,55 @@ export default function StudentApp({
                   </div>
                 </div>
 
+                {/* Floating Assistant Alert Notification popup */}
+                {coachAIPipAlert && (
+                  <div className="bg-brand text-black rounded-xl p-3.5 text-[9px] font-mono font-black uppercase tracking-wider flex items-center gap-2 border border-brand/20 shadow-xl animate-bounce">
+                    <Sparkles className="w-5 h-5 animate-pulse shrink-0" />
+                    <span>{coachAIPipAlert}</span>
+                  </div>
+                )}
+
+                {/* Technogym Coach AI Assistant Quick Toggler */}
+                <div className="bg-gradient-to-r from-brand/10 to-transparent border border-brand/20 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                  <div className="space-y-1 text-left">
+                    <span className="text-[9px] font-mono text-brand uppercase tracking-wider font-bold">Technogym Coach AI</span>
+                    <h5 className="text-xs font-bold text-white uppercase">Treino Preventivo Inteligente</h5>
+                    <p className="text-[9px] text-white/40 leading-tight">
+                      {isCoachAdjusted 
+                        ? "Cargas e repetições reduzidas em 20% para sua segurança articular."
+                        : "Sente fadiga muscular ou dores articulares?"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isCoachAdjusted}
+                    onClick={() => {
+                      setIsCoachAdjusted(true);
+                      setCoachAIPipAlert("Technogym Coach AI: Reduzimos as repetições e cargas das séries restantes em 20% para proteger suas articulações e prevenir lesões hoje.");
+                      setTimeout(() => setCoachAIPipAlert(null), 6000);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition ${
+                      isCoachAdjusted 
+                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 cursor-not-allowed"
+                        : "bg-brand text-black hover:bg-brand-hover cursor-pointer"
+                    }`}
+                  >
+                    {isCoachAdjusted ? "Ajustado" : "Fadiga / Dor"}
+                  </button>
+                </div>
+
                 {/* Active Exercise Card */}
                 {te && (
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-4">
-                    {/* Visual Media */}
+                    {/* Visual Media Video Loop */}
                     <div className="relative h-44 rounded-xl overflow-hidden border border-white/5 bg-black">
-                      <img 
-                        src={te.exercicio?.midia_url} 
-                        alt={te.exercicio?.nome} 
+                      <video 
+                        src={getExerciseVideoUrl(te.exercicio?.nome || "")}
+                        autoPlay 
+                        loop 
+                        muted 
+                        playsInline
                         className="w-full h-full object-cover" 
-                        referrerPolicy="no-referrer"
                       />
                       <span className="absolute top-3 left-3 bg-brand/95 text-black px-2 py-0.5 rounded-full font-mono text-[8px] font-black uppercase">
                         {te.exercicio?.grupo_muscular}
@@ -1490,14 +1651,24 @@ export default function StudentApp({
                     </div>
 
                     {/* Info */}
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-left">
                       <h3 className="text-sm font-display font-black text-white uppercase tracking-tight">{te.exercicio?.nome}</h3>
-                      <p className="text-[10px] text-white/40 font-mono">Meta: {te.series} séries x {te.repeticoes} reps ({te.carga})</p>
+                      <p className="text-[10px] text-white/40 font-mono">
+                        Meta: {te.series} séries x {
+                          isCoachAdjusted 
+                            ? `${Math.max(6, Math.round(parseInt(te.repeticoes, 10) * 0.8))} reps (Ajustado Coach AI)`
+                            : `${te.repeticoes} reps`
+                        } ({
+                          isCoachAdjusted 
+                            ? `${Math.max(2, Math.round(parseInt(te.carga, 10) * 0.8))} kg (Ajustado Coach AI)`
+                            : te.carga
+                        })
+                      </p>
                     </div>
 
                     {/* Set checklist tracker */}
                     <div className="space-y-2">
-                      <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold block">Checklist de Séries</span>
+                      <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold block text-left">Checklist de Séries</span>
                       <div className="grid grid-cols-1 gap-1.5">
                         {Array.from({ length: te.series || 3 }).map((_, sIdx) => {
                           const isDone = activeSetStatus[te.id]?.[sIdx] || false;
@@ -1509,8 +1680,10 @@ export default function StudentApp({
                                 status[sIdx] = !status[sIdx];
                                 setActiveSetStatus(prev => ({ ...prev, [te.id]: status }));
                                 if (status[sIdx]) {
-                                  // Trigger Rest Timer
                                   setRestTimeLeft(60);
+                                  addMoves(15); // +15 moves per completed set
+                                } else {
+                                  addMoves(-15);
                                 }
                               }}
                               className={`w-full p-2.5 rounded-xl border flex justify-between items-center transition cursor-pointer text-left ${
@@ -1641,6 +1814,8 @@ export default function StudentApp({
                           setScreen("home");
                           setWorkoutTimeElapsed(0);
                           setActiveSetStatus({});
+                          setIsCoachAdjusted(false); // Reset coach adjustment for next workout
+                          addMoves(100); // Earn 100 MOVEs for finishing the entire training session
                         }}
                         className="w-full py-4 bg-brand hover:bg-brand-hover text-black rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer"
                       >
